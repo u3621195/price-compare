@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Price Checker</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0f0f10; --surface: #1a1a1d; --border: #2e2e33;
+    --accent: #d4f500; --accent2: #ff5c35; --text: #f0f0ee;
+    --muted: #666670; --best-glow: rgba(212,245,0,0.15);
+  }
+  body { font-family: 'Syne', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding: 24px 16px 60px; }
+  header { text-align: center; margin-bottom: 36px; }
+  header h1 { font-size: clamp(28px, 7vw, 52px); font-weight: 800; letter-spacing: -1px; line-height: 1; }
+  header h1 span { color: var(--accent); }
+  header p { margin-top: 8px; color: var(--muted); font-size: 13px; font-family: 'DM Mono', monospace; letter-spacing: 0.5px; }
+
+  .unit-toggle { display: flex; justify-content: center; margin-bottom: 28px; }
+  .unit-toggle button {
+    font-family: 'DM Mono', monospace; font-size: 12px; padding: 8px 20px;
+    background: var(--surface); color: var(--muted); border: 1px solid var(--border);
+    cursor: pointer; transition: all 0.15s; letter-spacing: 0.5px;
+  }
+  .unit-toggle button:first-child { border-radius: 6px 0 0 6px; }
+  .unit-toggle button:last-child { border-radius: 0 6px 6px 0; }
+  .unit-toggle button.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 500; }
+
+  .products-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(270px, 1fr)); gap: 14px; max-width: 900px; margin: 0 auto 20px; }
+
+  .product-card { background: var(--surface); border: 1px solid var(--border); border-radius: 14px; padding: 18px; position: relative; transition: border-color 0.2s, box-shadow 0.2s; }
+  .product-card.best { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 8px 32px var(--best-glow); }
+  .product-card.worst { border-color: var(--accent2); opacity: 0.75; }
+
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+  .card-num { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); background: var(--bg); border: 1px solid var(--border); border-radius: 20px; padding: 2px 10px; }
+  .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 18px; padding: 2px 4px; border-radius: 4px; transition: color 0.15s; }
+  .remove-btn:hover { color: var(--accent2); }
+
+  .field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  label { font-size: 10px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+  input[type="text"], input[type="number"] {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+    color: var(--text); font-family: 'DM Mono', monospace; font-size: 15px;
+    padding: 9px 11px; width: 100%; transition: border-color 0.15s; -moz-appearance: textfield;
+  }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus { outline: none; border-color: var(--accent); }
+  .name-field input { font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 700; }
+
+  .scan-row { display: flex; gap: 8px; align-items: flex-end; margin-bottom: 10px; }
+  .scan-row .field { flex: 1; margin-bottom: 0; }
+  .scan-btn {
+    background: var(--accent); border: none; border-radius: 8px; color: #000;
+    cursor: pointer; font-size: 20px; padding: 9px 13px; transition: opacity 0.15s;
+    line-height: 1; flex-shrink: 0;
+  }
+  .scan-btn:hover { opacity: 0.85; }
+  .scan-btn:active { transform: scale(0.95); }
+
+  .lookup-status { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); min-height: 16px; margin-bottom: 8px; letter-spacing: 0.3px; }
+  .lookup-status.ok { color: var(--accent); }
+  .lookup-status.err { color: var(--accent2); }
+  .lookup-status.loading { color: #aaa; animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .result-box { margin-top: 14px; background: var(--bg); border-radius: 10px; padding: 12px 14px; min-height: 54px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .result-label { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .result-value { font-size: 22px; font-weight: 800; color: var(--muted); font-family: 'DM Mono', monospace; transition: color 0.2s; }
+  .product-card.best .result-value { color: var(--accent); }
+  .product-card.worst .result-value { color: var(--accent2); }
+
+  .badge { font-size: 10px; font-family: 'DM Mono', monospace; padding: 3px 8px; border-radius: 20px; letter-spacing: 0.5px; font-weight: 500; }
+  .badge.best { background: var(--accent); color: #000; }
+  .badge.worst { background: var(--accent2); color: #fff; }
+
+  .savings-strip { max-width: 900px; margin: 0 auto 24px; background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 12px 18px; display: none; align-items: center; gap: 12px; font-family: 'DM Mono', monospace; font-size: 13px; }
+  .savings-strip.show { display: flex; }
+  .savings-strip strong { color: var(--accent); }
+
+  .actions { display: flex; justify-content: center; gap: 12px; max-width: 900px; margin: 0 auto; }
+  .btn { font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px; letter-spacing: 0.5px; padding: 11px 22px; border-radius: 8px; cursor: pointer; border: none; transition: opacity 0.15s, transform 0.1s; }
+  .btn:active { transform: scale(0.97); }
+  .btn-add { background: var(--accent); color: #000; }
+  .btn-reset { background: var(--surface); color: var(--muted); border: 1px solid var(--border); }
+  .btn:hover { opacity: 0.85; }
+
+  /* Scanner overlay */
+  #scannerOverlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.97); z-index: 1000; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+  #scannerOverlay.active { display: flex; }
+  #scannerOverlay h2 { font-size: 17px; color: var(--text); margin-bottom: 18px; font-weight: 700; letter-spacing: -0.3px; }
+  #videoWrap { position: relative; width: min(92vw, 420px); aspect-ratio: 4/3; border-radius: 16px; overflow: hidden; background: #000; }
+  #scanVideo { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .scan-frame { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; }
+  .scan-frame::before { content: ''; display: block; width: 62%; height: 38%; border: 2px solid var(--accent); border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
+  .scan-line { position: absolute; left: 19%; right: 19%; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: scanline 2s ease-in-out infinite; }
+  @keyframes scanline { 0%{top:33%;opacity:1} 50%{top:60%;opacity:1} 100%{top:33%;opacity:1} }
+  #scannerStatus { margin-top: 16px; font-family: 'DM Mono', monospace; font-size: 13px; color: var(--muted); text-align: center; min-height: 20px; padding: 0 20px; }
+  #scannerStatus.found { color: var(--accent); }
+  #scannerStatus.err { color: var(--accent2); }
+  #cancelScan { margin-top: 20px; background: var(--surface); border: 1px solid var(--border); color: var(--text); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 14px; padding: 11px 32px; border-radius: 8px; cursor: pointer; }
+
+  @media (max-width: 480px) { .products-grid { grid-template-columns: 1fr; } header h1 { font-size: 32px; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PRICE<span>/</span>WEIGHT</h1>
+  <p>scan barcode · compare · buy smart</p>
+</header>
+
+<div class="unit-toggle">
+  <button class="active" onclick="setUnit('g')">g / ml</button>
+  <button onclick="setUnit('kg')">kg / L</button>
+  <button onclick="setUnit('oz')">oz / fl oz</button>
+  <button onclick="setUnit('lb')">lb</button>
+</div>
+
+<div class="savings-strip" id="savingsStrip">
+  <span>💡</span><span id="savingsText"></span>
+</div>
+
+<div class="products-grid" id="grid"></div>
+
+<div class="actions">
+  <button class="btn btn-add" onclick="addProduct()">+ Add Product</button>
+  <button class="btn btn-reset" onclick="resetAll()">Reset</button>
+</div>
+
+<!-- Scanner Overlay -->
+<div id="scannerOverlay">
+  <h2>📷 Point at Barcode</h2>
+  <div id="videoWrap">
+    <video id="scanVideo" autoplay muted playsinline></video>
+    <div class="scan-frame"><div class="scan-line"></div></div>
+  </div>
+  <div id="scannerStatus">Align barcode within the frame…</div>
+  <button id="cancelScan" onclick="stopScanner()">Cancel</button>
+</div>
+
+<script>
+  let products = [];
+  let unit = 'g';
+  let idCounter = 0;
+  let activeScanId = null;
+  let codeReader = null;
+  let scanStream = null;
+
+  function setUnit(u) {
+    unit = u;
+    document.querySelectorAll('.unit-toggle button').forEach((b, i) => {
+      b.classList.toggle('active', ['g','kg','oz','lb'][i] === u);
+    });
+    recalcAll();
+    // Update all weight labels
+    document.querySelectorAll('.weight-label').forEach(el => {
+      el.textContent = { g:'g / ml', kg:'kg / L', oz:'oz / fl oz', lb:'lb' }[unit];
+    });
+  }
+
+  function addProduct(name='', price='', weight='') {
+    const id = ++idCounter;
+    products.push({ id, name, price, weight });
+    render();
+    setTimeout(() => { const i = document.querySelector(`[data-id="${id}"] .name-inp`); if(i) i.focus(); }, 50);
+  }
+
+  function removeProduct(id) { products = products.filter(p => p.id !== id); render(); }
+
+  function updateField(id, field, value) {
+    const p = products.find(p => p.id === id);
+    if (p) { p[field] = value; recalcAll(); }
+  }
+
+  // ── Barcode scanner ───────────────────────────────────────────────────
+  async function startScanner(productId) {
+    activeScanId = productId;
+    const overlay = document.getElementById('scannerOverlay');
+    const status  = document.getElementById('scannerStatus');
+    overlay.classList.add('active');
+    status.textContent = 'Starting camera…';
+    status.className = '';
+
+    try {
+      scanStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }
+      });
+      const video = document.getElementById('scanVideo');
+      video.srcObject = scanStream;
+      await video.play();
+
+      codeReader = new ZXing.BrowserMultiFormatReader();
+      status.textContent = 'Align barcode within the frame…';
+
+      codeReader.decodeFromStream(scanStream, video, (result, err) => {
+        if (result) {
+          const barcode = result.getText();
+          status.textContent = '✓ Barcode found: ' + barcode;
+          status.className = 'found';
+          const saved = activeScanId;
+          stopScanner();
+          lookupBarcode(barcode, saved);
+        }
+      });
+    } catch(e) {
+      status.textContent = 'Camera access denied. Please allow camera permission.';
+      status.className = 'err';
+    }
+  }
+
+  function stopScanner() {
+    if (codeReader) { try { codeReader.reset(); } catch(e){} codeReader = null; }
+    if (scanStream) { scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
+    const v = document.getElementById('scanVideo');
+    if (v) v.srcObject = null;
+    document.getElementById('scannerOverlay').classList.remove('active');
+  }
+
+  // ── Open Food Facts lookup ────────────────────────────────────────────
+  async function lookupBarcode(barcode, productId) {
+    if (!barcode) return;
+    const statusEl = document.querySelector(`[data-id="${productId}"] .lookup-status`);
+    if (statusEl) { statusEl.textContent = '⏳ Looking up barcode…'; statusEl.className = 'lookup-status loading'; }
+
+    try {
+      const fields = 'product_name,product_name_en,product_name_th,quantity';
+      const res  = await fetch(`https://world.openfoodfacts.org/api/v2/product/${barcode}.json?fields=${fields}`);
+      const data = await res.json();
+
+      if (data.status === 1 && data.product) {
+        const prod = data.product;
+        const name = prod.product_name_th || prod.product_name_en || prod.product_name || '';
+        const qtyStr = (prod.quantity || '').trim();
+
+        // Parse weight from quantity string and convert to current unit
+        let weight = '';
+        const m = qtyStr.match(/([\d.,]+)\s*(g|ml|kg|l|oz|lb)\b/i);
+        if (m) {
+          let val = parseFloat(m[1].replace(',', '.'));
+          const src = m[2].toLowerCase();
+          // Normalise to grams first
+          const toG = { g:1, ml:1, kg:1000, l:1000, oz:28.3495, lb:453.592 };
+          const fromG = { g:1, kg:0.001, oz:0.035274, lb:0.0022046 };
+          const grams = val * (toG[src] || 1);
+          val = grams * (fromG[unit] || 1);
+          weight = parseFloat(val.toFixed(4)) + '';
+        }
+
+        const p = products.find(p => p.id === productId);
+        if (p) { if (name) p.name = name; if (weight) p.weight = weight; }
+        render();
+
+        const s2 = document.querySelector(`[data-id="${productId}"] .lookup-status`);
+        if (s2) {
+          s2.textContent = name
+            ? '✓ ' + name + (qtyStr ? '  ·  ' + qtyStr : '')
+            : '✓ Found – no product name in database';
+          s2.className = 'lookup-status ok';
+        }
+      } else {
+        if (statusEl) { statusEl.textContent = '⚠ Not found in Open Food Facts database'; statusEl.className = 'lookup-status err'; }
+      }
+    } catch(e) {
+      if (statusEl) { statusEl.textContent = '⚠ Network error – check your connection'; statusEl.className = 'lookup-status err'; }
+    }
+  }
+
+  // ── Recalculate ───────────────────────────────────────────────────────
+  function recalcAll() {
+    const results = products.map(p => {
+      const price = parseFloat(p.price), weight = parseFloat(p.weight);
+      if (!isNaN(price) && !isNaN(weight) && price > 0 && weight > 0) return { id: p.id, ppu: price / weight };
+      return { id: p.id, ppu: null };
+    });
+    const valid = results.filter(r => r.ppu !== null);
+    let bestId=null, worstId=null, bestVal=null, worstVal=null;
+    if (valid.length >= 2) {
+      const s = [...valid].sort((a,b) => a.ppu - b.ppu);
+      bestId=s[0].id; bestVal=s[0].ppu; worstId=s[s.length-1].id; worstVal=s[s.length-1].ppu;
+    }
+    results.forEach(r => {
+      const card = document.querySelector(`[data-id="${r.id}"]`);
+      if (!card) return;
+      card.classList.remove('best','worst');
+      const rv = card.querySelector('.result-value');
+      const badge = card.querySelector('.badge');
+      if (r.ppu !== null) {
+        rv.textContent = formatPPU(r.ppu);
+        if      (r.id === bestId)  { card.classList.add('best');  badge.className='badge best';  badge.textContent='CHEAPEST'; }
+        else if (r.id === worstId) { card.classList.add('worst'); badge.className='badge worst'; badge.textContent='PRICIEST'; }
+        else { badge.className='badge'; badge.textContent=''; }
+      } else {
+        rv.textContent = '—'; badge.className='badge'; badge.textContent='';
+      }
+    });
+    const strip = document.getElementById('savingsStrip');
+    const txt   = document.getElementById('savingsText');
+    if (valid.length >= 2 && bestVal && worstVal) {
+      const saving   = ((worstVal - bestVal) / worstVal * 100).toFixed(1);
+      const bestName = products.find(p => p.id === bestId)?.name || 'Best option';
+      txt.innerHTML  = `<strong>${escHtml(bestName)}</strong> saves you <strong>${saving}%</strong> vs the priciest option`;
+      strip.classList.add('show');
+    } else {
+      strip.classList.remove('show');
+    }
+  }
+
+  function formatPPU(val) {
+    const lbl = { g:'฿/g', kg:'฿/kg', oz:'฿/oz', lb:'฿/lb' }[unit];
+    return (val < 10 ? val.toFixed(3) : val < 100 ? val.toFixed(2) : val.toFixed(1)) + ' ' + lbl;
+  }
+
+  function escHtml(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────
+  function render() {
+    const grid = document.getElementById('grid');
+    const scrollY = window.scrollY;
+    const unitLabel = { g:'g / ml', kg:'kg / L', oz:'oz / fl oz', lb:'lb' }[unit];
+    grid.innerHTML = '';
+
+    products.forEach((p, idx) => {
+      const card = document.createElement('div');
+      card.className = 'product-card';
+      card.dataset.id = p.id;
+      card.innerHTML = `
+        <div class="card-header">
+          <span class="card-num">#${idx+1}</span>
+          <span class="badge"></span>
+          <button class="remove-btn" onclick="removeProduct(${p.id})">×</button>
+        </div>
+        <div class="field name-field">
+          <label>Product Name</label>
+          <input class="name-inp" type="text" placeholder="e.g. Brand A 500g" value="${escHtml(p.name)}"
+            oninput="updateField(${p.id},'name',this.value)" />
+        </div>
+        <div class="scan-row">
+          <div class="field">
+            <label>Barcode (type or scan)</label>
+            <input type="text" placeholder="Scan 📷 or type barcode number"
+              onkeydown="if(event.key==='Enter')lookupBarcode(this.value.trim(),${p.id})"
+              onblur="if(this.value.trim())lookupBarcode(this.value.trim(),${p.id})" />
+          </div>
+          <button class="scan-btn" onclick="startScanner(${p.id})" title="Open camera scanner">📷</button>
+        </div>
+        <div class="lookup-status"></div>
+        <div class="field-row">
+          <div class="field">
+            <label>Price (฿)</label>
+            <input type="number" placeholder="0.00" value="${escHtml(p.price)}" min="0" step="0.01"
+              oninput="updateField(${p.id},'price',this.value)" />
+          </div>
+          <div class="field">
+            <label>Weight (<span class="weight-label">${unitLabel}</span>)</label>
+            <input type="number" placeholder="0" value="${escHtml(p.weight)}" min="0" step="any"
+              oninput="updateField(${p.id},'weight',this.value)" />
+          </div>
+        </div>
+        <div class="result-box">
+          <span class="result-label">Price per ${unit}</span>
+          <span class="result-value">—</span>
+        </div>`;
+      grid.appendChild(card);
+    });
+
+    recalcAll();
+    window.scrollTo(0, scrollY);
+  }
+
+  function resetAll() {
+    stopScanner(); products = []; idCounter = 0;
+    render(); addProduct(); addProduct();
+  }
+
+  addProduct(); addProduct();
+</script>
+</body>
+</html>
