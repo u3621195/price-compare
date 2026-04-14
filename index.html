@@ -1,658 +1,881 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Smart Unit Price Compare</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/@zxing/library@0.19.1/umd/index.min.js"></script>
-<style>
-  :root{
-    --bg:#f6f8fc;
-    --surface:#ffffff;
-    --surface-2:#f8fbff;
-    --text:#1f1f1f;
-    --muted:#5f6368;
-    --line:#d7e3f4;
-    --primary:#1a73e8;
-    --primary-2:#e8f0fe;
-    --good:#137333;
-    --good-bg:#e6f4ea;
-    --warn:#b3261e;
-    --warn-bg:#fce8e6;
-    --shadow:0 2px 6px rgba(60,64,67,.15),0 1px 2px rgba(60,64,67,.3);
-    --shadow-hover:0 8px 20px rgba(60,64,67,.18),0 3px 6px rgba(60,64,67,.2);
-    --radius:24px;
-  }
-  *{box-sizing:border-box}
-  body{
-    margin:0;
-    font-family:"Google Sans", Arial, sans-serif;
-    color:var(--text);
-    background:
-      radial-gradient(circle at top left, #e8f0fe 0, transparent 32%),
-      radial-gradient(circle at top right, #e6f4ea 0, transparent 28%),
-      var(--bg);
-    min-height:100vh;
-  }
-  .app{max-width:1180px;margin:0 auto;padding:24px 16px 48px}
-  .hero{
-    background:rgba(255,255,255,.82);
-    backdrop-filter:blur(12px);
-    border:1px solid rgba(255,255,255,.7);
-    border-radius:32px;
-    box-shadow:var(--shadow);
-    padding:26px 24px;
-    margin-bottom:18px;
-  }
-  .eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--primary-2);color:var(--primary);padding:8px 12px;border-radius:999px;font-size:13px;font-weight:700}
-  h1{margin:14px 0 8px;font-size:clamp(28px,5vw,48px);line-height:1.03;letter-spacing:-.02em}
-  .hero p{margin:0;color:var(--muted);font-size:15px;line-height:1.6;max-width:880px}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Price Pop</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0f0f1a;
+      --surface: #16162a;
+      --surface2: #1e1e35;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(255,255,255,0.14);
+      --purple: #7c5cfc;
+      --purple-glow: rgba(124,92,252,0.25);
+      --pink: #f05fa3;
+      --teal: #00ddb3;
+      --red: #ff5c77;
+      --text: #f0eeff;
+      --muted: rgba(240,238,255,0.45);
+      --muted2: rgba(240,238,255,0.25);
+      --green: #00ddb3;
+      --green-bg: rgba(0,221,179,0.1);
+      --red-bg: rgba(255,92,119,0.1);
+      --radius: 20px;
+      --radius-sm: 12px;
+      --radius-xs: 8px;
+    }
 
-  .toolbar{display:grid;grid-template-columns:1fr auto auto;gap:12px;align-items:center;margin:18px 0 18px}
-  .segmented{display:inline-flex;flex-wrap:wrap;gap:8px;padding:8px;background:#fff;border:1px solid var(--line);border-radius:999px;box-shadow:var(--shadow)}
-  .segmented button{
-    border:none;background:transparent;color:var(--muted);padding:10px 14px;border-radius:999px;cursor:pointer;
-    font:500 14px "Google Sans", Arial, sans-serif;transition:.18s ease;
-  }
-  .segmented button.active{background:var(--primary);color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.15)}
-  .top-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
-  .btn{
-    border:none;border-radius:999px;padding:12px 18px;cursor:pointer;font:700 14px "Google Sans", Arial, sans-serif;
-    transition:transform .12s ease, box-shadow .18s ease, background .18s ease;display:inline-flex;align-items:center;gap:8px;
-  }
-  .btn:hover{transform:translateY(-1px);box-shadow:var(--shadow-hover)}
-  .btn.primary{background:var(--primary);color:#fff}
-  .btn.secondary{background:#fff;color:var(--text);border:1px solid var(--line)}
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
-  .summary{
-    display:none;align-items:center;gap:12px;padding:14px 16px;background:var(--good-bg);color:var(--good);
-    border:1px solid #c4dfc9;border-radius:20px;box-shadow:var(--shadow);margin-bottom:18px;
-  }
-  .summary.show{display:flex}
-  .summary strong{font-weight:700}
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0 0 60px;
+    }
 
-  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
-  .card{
-    background:rgba(255,255,255,.88);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.8);border-radius:28px;
-    box-shadow:var(--shadow);padding:18px;transition:.2s ease;position:relative;overflow:hidden;
-  }
-  .card:hover{box-shadow:var(--shadow-hover);transform:translateY(-1px)}
-  .card.best{outline:2px solid #34a8531a;border-color:#c4dfc9;background:linear-gradient(180deg,#ffffff 0,#f7fff9 100%)}
-  .card.worst{border-color:#f3c6c1;background:linear-gradient(180deg,#ffffff 0,#fff8f7 100%)}
-  .card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-  .card-chip-wrap{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-  .chip{font:500 12px "Roboto Mono", monospace;border-radius:999px;padding:6px 10px;background:#eef3fd;color:#49607a;border:1px solid #d9e2f3}
-  .chip.best{background:var(--good-bg);color:var(--good);border-color:#c4dfc9}
-  .chip.worst{background:var(--warn-bg);color:var(--warn);border-color:#f3c6c1}
-  .icon-btn{background:transparent;border:none;color:#5f6368;cursor:pointer;border-radius:12px;padding:8px 10px;font-size:18px}
-  .icon-btn:hover{background:#eff3f9}
+    /* noise overlay */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.03;
+      pointer-events: none;
+      z-index: 0;
+    }
 
-  .grid{display:grid;gap:12px}
-  .field{display:grid;gap:6px}
-  .field.two{grid-template-columns:1fr 128px}
-  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  label{font:500 11px "Roboto Mono", monospace;color:var(--muted);letter-spacing:.08em;text-transform:uppercase}
-  input, select{
-    width:100%;border:1px solid var(--line);background:#fff;border-radius:16px;padding:13px 14px;font:500 15px "Google Sans", Arial, sans-serif;color:var(--text);
-    transition:border-color .18s ease, box-shadow .18s ease, background .18s ease;
-  }
-  input:focus, select:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 4px rgba(26,115,232,.12)}
-  .mono{font-family:"Roboto Mono", monospace}
+    /* glow blobs */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(80px);
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0.18;
+    }
+    .blob-1 { width: 380px; height: 380px; background: var(--purple); top: -120px; left: -100px; }
+    .blob-2 { width: 300px; height: 300px; background: var(--pink); top: 40px; right: -80px; }
 
-  .lookup-row{display:grid;grid-template-columns:1fr 112px 52px;gap:10px;align-items:end}
-  .scan-btn{
-    border:none;border-radius:16px;background:var(--primary);color:#fff;height:50px;cursor:pointer;font-size:21px;
-    box-shadow:0 1px 2px rgba(0,0,0,.16)
-  }
-  .scan-btn:hover{filter:brightness(.97)}
+    .wrap {
+      position: relative;
+      z-index: 1;
+      width: 100%;
+      max-width: 460px;
+      padding: 0 16px;
+    }
 
-  .status{
-    min-height:42px;border-radius:16px;padding:10px 12px;background:var(--surface-2);border:1px dashed #d7e3f4;color:var(--muted);
-    display:flex;align-items:center;gap:8px;font-size:13px;line-height:1.45;
-  }
-  .status.ok{background:var(--good-bg);border-style:solid;border-color:#c4dfc9;color:var(--good)}
-  .status.err{background:var(--warn-bg);border-style:solid;border-color:#f3c6c1;color:var(--warn)}
-  .status.loading{animation:pulse 1s infinite}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+    /* ── TOP BAR ── */
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0 10px;
+    }
 
-  .meta{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-  .meta-box{padding:11px 12px;border:1px solid var(--line);border-radius:16px;background:#fff}
-  .meta-label{font:500 10px "Roboto Mono", monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.08em}
-  .meta-value{margin-top:5px;font-size:14px;line-height:1.4;word-break:break-word}
-  .meta-value a{color:var(--primary);text-decoration:none}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
 
-  .result{
-    margin-top:2px;padding:14px 14px 12px;border-radius:18px;background:#fff;border:1px solid var(--line);display:grid;gap:4px;
-  }
-  .result .small{font:500 10px "Roboto Mono", monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-  .result .big{font:700 28px "Roboto Mono", monospace;letter-spacing:-.03em}
-  .card.best .result .big{color:var(--good)}
-  .card.worst .result .big{color:var(--warn)}
+    .logo {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--purple), var(--pink));
+      display: grid; place-items: center;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
 
-  .hint{margin-top:18px;color:var(--muted);font-size:13px;line-height:1.55;text-align:center}
+    .brand-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+    }
 
-  #scannerOverlay{display:none;position:fixed;inset:0;background:rgba(17,24,39,.84);backdrop-filter:blur(10px);z-index:1000;padding:18px}
-  #scannerOverlay.active{display:grid;place-items:center}
-  .scanner-panel{width:min(92vw,480px);background:#101418;color:#fff;border-radius:28px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.35)}
-  .scanner-title{font-size:22px;font-weight:700;margin:0 0 6px}
-  .scanner-sub{margin:0 0 16px;color:#c8d0da;font-size:14px;line-height:1.5}
-  #videoWrap{position:relative;width:100%;aspect-ratio:4/3;background:#000;border-radius:22px;overflow:hidden}
-  #scanVideo{width:100%;height:100%;object-fit:cover}
-  .scan-frame{position:absolute;inset:0;display:grid;place-items:center;pointer-events:none}
-  .scan-frame::before{content:"";width:72%;height:34%;border:2px solid #8ab4f8;border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,.33)}
-  .scan-line{position:absolute;left:14%;right:14%;height:2px;background:linear-gradient(90deg,transparent,#8ab4f8,transparent);animation:scanline 1.9s ease-in-out infinite}
-  @keyframes scanline{0%{top:36%}50%{top:60%}100%{top:36%}}
-  #scannerStatus{min-height:24px;margin-top:14px;color:#c8d0da;font-size:14px}
-  #scannerStatus.found{color:#7ee787}
-  #scannerStatus.err{color:#ffb4ab}
-  .scanner-actions{display:flex;justify-content:flex-end;margin-top:16px}
+    .btn-reset {
+      border: none;
+      background: var(--surface2);
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 8px 14px;
+      border-radius: 999px;
+      cursor: pointer;
+      border: 0.5px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+    .btn-reset:hover { color: var(--text); border-color: var(--border-hover); }
+    .btn-reset svg { width: 13px; height: 13px; }
 
-  @media (max-width:900px){.toolbar{grid-template-columns:1fr;}.top-actions{justify-content:flex-start}}
-  @media (max-width:640px){
-    .app{padding:16px 12px 32px}
-    .hero{padding:20px 18px;border-radius:24px}
-    .field.two,.field-row,.lookup-row,.meta{grid-template-columns:1fr}
-    .cards{grid-template-columns:1fr}
-  }
-</style>
+    /* ── GREETING ── */
+    .greeting {
+      margin: 24px 0 28px;
+    }
+    .greeting h1 {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: clamp(28px, 7vw, 36px);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .greeting h1 span {
+      background: linear-gradient(90deg, var(--purple), var(--pink));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .greeting p {
+      font-size: 14px;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    /* ── PRODUCT CARDS ── */
+    .cards {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      position: relative;
+      transition: border-color 0.2s ease, transform 0.15s ease;
+      animation: cardIn 0.35s ease both;
+    }
+    .card:hover { border-color: var(--border-hover); }
+    .card.best { border-color: rgba(0,221,179,0.3); }
+    .card.worst { border-color: rgba(255,92,119,0.25); }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* card accent top line */
+    .card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 20px; right: 20px;
+      height: 1px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.06), transparent);
+    }
+
+    .card-head {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .card-icon {
+      width: 40px; height: 40px;
+      border-radius: var(--radius-xs);
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      display: grid; place-items: center;
+      font-size: 20px;
+      cursor: pointer;
+      transition: background 0.15s ease;
+      position: relative;
+      flex-shrink: 0;
+    }
+    .card-icon:hover { background: rgba(124,92,252,0.15); }
+    .card-icon-hint {
+      position: absolute;
+      bottom: -20px; left: 50%;
+      transform: translateX(-50%);
+      font-size: 9px;
+      color: var(--muted2);
+      white-space: nowrap;
+      font-family: 'DM Sans', sans-serif;
+      pointer-events: none;
+    }
+
+    .card-name-wrap {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .card-name-display {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      letter-spacing: -0.01em;
+      border-radius: 6px;
+      padding: 2px 4px;
+      margin-left: -4px;
+      transition: background 0.15s ease;
+    }
+    .card-name-display:hover { background: rgba(255,255,255,0.05); }
+    .card-name-display svg { width: 12px; height: 12px; opacity: 0.35; flex-shrink: 0; }
+
+    .card-name-input {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      background: transparent;
+      border: none;
+      outline: none;
+      border-bottom: 1.5px solid var(--purple);
+      width: 100%;
+      padding: 2px 0;
+      display: none;
+      letter-spacing: -0.01em;
+    }
+
+    .card-sub {
+      font-size: 11px;
+      color: var(--muted2);
+      margin-top: 2px;
+    }
+
+    .badge {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 999px;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+      display: none;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .badge.best { display: inline-flex; background: var(--green-bg); color: var(--teal); }
+    .badge.worst { display: inline-flex; background: var(--red-bg); color: var(--red); }
+
+    /* fields */
+    .field-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .field {
+      flex: 1;
+    }
+
+    .field label {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--muted2);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 6px;
+    }
+    .field label svg { width: 11px; height: 11px; }
+
+    .field input {
+      width: 100%;
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-xs);
+      padding: 12px 14px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.16s ease, box-shadow 0.16s ease;
+    }
+    .field input::placeholder { color: var(--muted2); font-weight: 400; }
+    .field input:focus {
+      border-color: rgba(124,92,252,0.5);
+      box-shadow: 0 0 0 3px rgba(124,92,252,0.12);
+    }
+
+    /* per-unit result */
+    .result-row {
+      background: var(--surface2);
+      border-radius: var(--radius-sm);
+      padding: 12px 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border: 0.5px solid var(--border);
+      transition: background 0.2s ease;
+    }
+    .card.best .result-row { background: var(--green-bg); border-color: rgba(0,221,179,0.15); }
+    .card.worst .result-row { background: var(--red-bg); border-color: rgba(255,92,119,0.12); }
+
+    .result-label {
+      font-size: 11px;
+      color: var(--muted);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .result-label svg { width: 11px; height: 11px; }
+
+    .result-value {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--muted);
+      transition: color 0.2s ease;
+    }
+    .card.best .result-value { color: var(--teal); }
+    .card.worst .result-value { color: var(--red); }
+    .card:not(.best):not(.worst) .result-value.has-value { color: var(--text); }
+
+    .result-math {
+      font-size: 10px;
+      color: var(--muted2);
+      margin-top: 3px;
+      text-align: right;
+    }
+
+    /* remove button */
+    .btn-remove {
+      position: absolute;
+      top: 14px; right: 14px;
+      width: 26px; height: 26px;
+      border-radius: 999px;
+      background: transparent;
+      border: none;
+      color: var(--muted2);
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s ease;
+      font-size: 14px;
+    }
+    .btn-remove:hover { background: var(--red-bg); color: var(--red); }
+    .btn-remove svg { width: 14px; height: 14px; }
+
+    /* ── ADD PRODUCT BUTTON ── */
+    .btn-add {
+      width: 100%;
+      margin-top: 12px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: transparent;
+      border: 1px dashed rgba(124,92,252,0.3);
+      color: rgba(124,92,252,0.7);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+    .btn-add:hover {
+      background: rgba(124,92,252,0.07);
+      border-color: rgba(124,92,252,0.55);
+      color: var(--purple);
+    }
+    .btn-add svg { width: 16px; height: 16px; }
+
+    /* ── VERDICT BANNER ── */
+    .verdict {
+      margin-top: 20px;
+      border-radius: var(--radius);
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(124,92,252,0.22), rgba(240,95,163,0.14));
+      border: 0.5px solid rgba(124,92,252,0.3);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      animation: cardIn 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+    .verdict::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, transparent 60%, rgba(124,92,252,0.08));
+      pointer-events: none;
+    }
+    .verdict.visible { display: flex; }
+
+    .verdict-left { flex: 1; }
+    .verdict-eyebrow {
+      font-size: 10px;
+      font-weight: 600;
+      color: rgba(240,238,255,0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 5px;
+    }
+    .verdict-name {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      font-size: 22px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      color: var(--text);
+      margin-bottom: 3px;
+    }
+    .verdict-savings {
+      font-size: 13px;
+      color: var(--teal);
+      font-weight: 500;
+    }
+
+    .verdict-icon {
+      width: 52px; height: 52px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.08);
+      display: grid; place-items: center;
+      font-size: 26px;
+      flex-shrink: 0;
+      border: 0.5px solid rgba(255,255,255,0.08);
+    }
+
+    /* ── SHARE BUTTON ── */
+    .btn-share {
+      width: 100%;
+      margin-top: 10px;
+      padding: 12px;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      border: 0.5px solid rgba(255,255,255,0.1);
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+    }
+    .btn-share.visible { display: flex; }
+    .btn-share:hover { background: rgba(255,255,255,0.05); color: var(--text); border-color: rgba(255,255,255,0.18); }
+    .btn-share svg { width: 14px; height: 14px; }
+
+    /* ── EMOJI PICKER ── */
+    .emoji-picker {
+      position: absolute;
+      top: 58px; left: 18px;
+      background: var(--surface2);
+      border: 0.5px solid var(--border-hover);
+      border-radius: var(--radius-sm);
+      padding: 10px;
+      display: none;
+      flex-wrap: wrap;
+      gap: 6px;
+      width: 220px;
+      z-index: 10;
+      animation: cardIn 0.2s ease;
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .emoji-picker.open { display: flex; }
+    .emoji-btn {
+      width: 34px; height: 34px;
+      border-radius: 8px;
+      background: transparent;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      display: grid; place-items: center;
+      transition: background 0.1s ease;
+    }
+    .emoji-btn:hover { background: rgba(255,255,255,0.08); }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed;
+      bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: var(--surface2);
+      border: 0.5px solid var(--border-hover);
+      border-radius: 999px;
+      padding: 10px 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: all 0.25s ease;
+      z-index: 100;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 400px) {
+      .verdict-name { font-size: 18px; }
+      .greeting h1 { font-size: 26px; }
+    }
+  </style>
 </head>
 <body>
-<div class="app">
-  <section class="hero">
-    <div class="eyebrow">🛒 SMART PRICE COMPARE</div>
-    <h1>Compare pack sizes faster.</h1>
-    <p>
-      Type the product details manually, or scan a barcode to pull product information online. The app checks
-      <strong>Open Food Facts</strong> and <strong>Open Beauty Facts</strong>, lets users edit anything, and then calculates
-      the cheapest price per unit.
-    </p>
-  </section>
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
 
-  <section class="toolbar">
-    <div class="segmented" id="unitToggle">
-      <button class="active" data-unit="g" onclick="setUnit('g')">g / ml</button>
-      <button data-unit="kg" onclick="setUnit('kg')">kg / L</button>
-      <button data-unit="oz" onclick="setUnit('oz')">oz / fl oz</button>
-      <button data-unit="lb" onclick="setUnit('lb')">lb</button>
-      <button data-unit="pcs" onclick="setUnit('pcs')">pcs</button>
+  <div class="wrap">
+    <!-- Top bar -->
+    <div class="topbar">
+      <div class="brand">
+        <div class="logo">🛒</div>
+        <div class="brand-name">Price Pop</div>
+      </div>
+      <button class="btn-reset" id="resetBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/></svg>
+        Reset
+      </button>
     </div>
-    <div></div>
-    <div class="top-actions">
-      <button class="btn primary" onclick="addProduct()">＋ Add Product</button>
-      <button class="btn secondary" onclick="resetAll()">Reset</button>
-    </div>
-  </section>
 
-  <div class="summary" id="summaryBar">
-    <span>✅</span>
-    <div id="summaryText"></div>
+    <!-- Greeting -->
+    <div class="greeting">
+      <h1>Find the <span>best deal</span>.</h1>
+      <p>Type an amount and price for each product. We'll do the math.</p>
+    </div>
+
+    <!-- Cards -->
+    <div class="cards" id="cards"></div>
+
+    <!-- Add product -->
+    <button class="btn-add" id="addBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      Add another product
+    </button>
+
+    <!-- Verdict -->
+    <div class="verdict" id="verdict">
+      <div class="verdict-left">
+        <div class="verdict-eyebrow">Best value pick</div>
+        <div class="verdict-name" id="verdictName">—</div>
+        <div class="verdict-savings" id="verdictSavings"></div>
+      </div>
+      <div class="verdict-icon">🏆</div>
+    </div>
+
+    <!-- Share -->
+    <button class="btn-share" id="shareBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share result
+    </button>
   </div>
 
-  <section class="cards" id="grid"></section>
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
 
-  <p class="hint">Tip: if barcode lookup finds the wrong quantity or misses a local product, users can still edit the name, size, and unit manually.</p>
-</div>
+  <script>
+    const EMOJIS = ['🥤','🧴','🍎','🧃','🍫','🧀','🧹','🍌','🥛','🧼','🥚','🍊','🛁','🧂','🍕','☕','🫙','🧻','🥩','🧆'];
 
-<div id="scannerOverlay">
-  <div class="scanner-panel">
-    <h2 class="scanner-title">Scan barcode</h2>
-    <p class="scanner-sub">Point the camera at the barcode. When the code is detected, the app will look it up automatically.</p>
-    <div id="videoWrap">
-      <video id="scanVideo" autoplay muted playsinline></video>
-      <div class="scan-frame"><div class="scan-line"></div></div>
-    </div>
-    <div id="scannerStatus">Starting camera…</div>
-    <div class="scanner-actions">
-      <button class="btn secondary" onclick="stopScanner()">Cancel</button>
-    </div>
-  </div>
-</div>
+    let products = [];
+    let activeEmojiCard = null;
 
-<script>
-  let products = [];
-  let currentUnit = 'g';
-  let idCounter = 0;
-  let activeScanId = null;
-  let codeReader = null;
-  let scanStream = null;
+    function uid() { return Math.random().toString(36).slice(2, 8); }
 
-  const UNIT_LABELS = { g:'g / ml', kg:'kg / L', oz:'oz / fl oz', lb:'lb', pcs:'pcs' };
-  const UNIT_PRICE_LABELS = { g:'฿ / g or ml', kg:'฿ / kg or L', oz:'฿ / oz', lb:'฿ / lb', pcs:'฿ / piece' };
-  const TO_BASE = { g:1, ml:1, kg:1000, l:1000, oz:28.349523125, 'fl oz':29.5735295625, lb:453.59237, pcs:1 };
-  const FROM_BASE = { g:1, kg:0.001, oz:0.03527396195, lb:0.00220462262, pcs:1 };
-
-  function setUnit(unit){
-    currentUnit = unit;
-    document.querySelectorAll('#unitToggle button').forEach(btn => btn.classList.toggle('active', btn.dataset.unit === unit));
-    render();
-  }
-
-  function addProduct(data = {}){
-    const id = ++idCounter;
-    products.push({
-      id,
-      name: data.name || '',
-      barcode: data.barcode || '',
-      barcodeSource: data.barcodeSource || 'auto',
-      lookupStatus: data.lookupStatus || '',
-      lookupClass: data.lookupClass || '',
-      foundIn: data.foundIn || '',
-      quantityText: data.quantityText || '',
-      productUrl: data.productUrl || '',
-      price: data.price || '',
-      weight: data.weight || ''
-    });
-    render();
-    setTimeout(() => {
-      const input = document.querySelector(`[data-id="${id}"] .name-input`);
-      if(input) input.focus();
-    }, 30);
-  }
-
-  function removeProduct(id){
-    products = products.filter(p => p.id !== id);
-    if (!products.length) addProduct();
-    else render();
-  }
-
-  function updateField(id, field, value){
-    const product = products.find(p => p.id === id);
-    if (!product) return;
-    product[field] = value;
-    recalcAll();
-  }
-
-  function setLookupState(id, text, className=''){
-    const p = products.find(item => item.id === id);
-    if (!p) return;
-    p.lookupStatus = text;
-    p.lookupClass = className;
-    const el = document.querySelector(`[data-id="${id}"] .status`);
-    if (el){
-      el.textContent = text || 'Ready for manual entry or barcode lookup.';
-      el.className = `status ${className}`.trim();
-    }
-  }
-
-  async function startScanner(productId){
-    activeScanId = productId;
-    const overlay = document.getElementById('scannerOverlay');
-    const status = document.getElementById('scannerStatus');
-    overlay.classList.add('active');
-    status.textContent = 'Starting camera…';
-    status.className = '';
-
-    try{
-      scanStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 } }, audio: false });
-      const video = document.getElementById('scanVideo');
-      video.srcObject = scanStream;
-      await video.play();
-      codeReader = new ZXing.BrowserMultiFormatReader();
-      status.textContent = 'Align barcode within the frame…';
-
-      codeReader.decodeFromStream(scanStream, video, (result) => {
-        if (result){
-          const barcode = result.getText();
-          status.textContent = `Found barcode: ${barcode}`;
-          status.className = 'found';
-          const targetId = activeScanId;
-          stopScanner();
-          const p = products.find(item => item.id === targetId);
-          if (p){
-            p.barcode = barcode;
-            render();
-            lookupBarcode(barcode, targetId, p.barcodeSource || 'auto');
-          }
-        }
-      });
-    } catch(error){
-      status.textContent = 'Camera access failed. Please allow permission or type the barcode manually.';
-      status.className = 'err';
-    }
-  }
-
-  function stopScanner(){
-    if (codeReader){ try { codeReader.reset(); } catch(e) {} codeReader = null; }
-    if (scanStream){ scanStream.getTracks().forEach(t => t.stop()); scanStream = null; }
-    const video = document.getElementById('scanVideo');
-    if (video) video.srcObject = null;
-    document.getElementById('scannerOverlay').classList.remove('active');
-  }
-
-  async function lookupBarcode(barcode, productId, preferredSource = 'auto'){
-    const normalized = String(barcode || '').trim();
-    if (!normalized) return;
-
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    product.barcode = normalized;
-    product.barcodeSource = preferredSource;
-
-    setLookupState(productId, 'Looking up barcode…', 'loading');
-
-    const queue = preferredSource === 'food'
-      ? ['food']
-      : preferredSource === 'beauty'
-      ? ['beauty']
-      : ['food', 'beauty'];
-
-    for (const source of queue){
-      try{
-        const result = await fetchProduct(source, normalized);
-        if (result && result.found){
-          applyLookupResult(productId, result);
-          return;
-        }
-      } catch (error) {}
+    function addProduct(name = '', amount = '', price = '', emoji = '🛍️') {
+      products.push({ id: uid(), name, amount, price, emoji });
+      render();
     }
 
-    product.foundIn = '';
-    product.productUrl = '';
-    product.quantityText = '';
-    setLookupState(productId, 'No matching record found in the selected database(s). You can still enter details manually.', 'err');
-    renderMetaOnly(productId);
-  }
+    function resetAll() {
+      products = [];
+      addProduct('Product A', '', '', '🛍️');
+      addProduct('Product B', '', '', '🛍️');
+      document.getElementById('verdict').classList.remove('visible');
+      document.getElementById('shareBtn').classList.remove('visible');
+    }
 
-  async function fetchProduct(source, barcode){
-    const base = source === 'beauty'
-      ? 'https://world.openbeautyfacts.org/api/v2/product/'
-      : 'https://world.openfoodfacts.net/api/v2/product/';
+    function removeProduct(id) {
+      products = products.filter(p => p.id !== id);
+      render();
+    }
 
-    const fields = ['product_name','product_name_en','product_name_th','generic_name','brands','quantity','url'];
-    const response = await fetch(`${base}${encodeURIComponent(barcode)}?fields=${fields.join(',')}`);
-    const data = await response.json();
+    function updateField(id, field, value) {
+      const p = products.find(p => p.id === id);
+      if (p) { p[field] = value; recalc(); }
+    }
 
-    if (data.status !== 1 || !data.product) return { found:false, source };
-
-    const prod = data.product;
-    const name = prod.product_name_th || prod.product_name_en || prod.product_name || prod.generic_name || '';
-    const quantityText = (prod.quantity || '').trim();
-    const parsed = parseQuantity(quantityText, currentUnit);
-
-    return {
-      found: true,
-      source,
-      sourceLabel: source === 'beauty' ? 'Open Beauty Facts' : 'Open Food Facts',
-      name,
-      quantityText,
-      weight: parsed.value,
-      productUrl: prod.url || buildPublicProductUrl(source, barcode),
-      barcode
-    };
-  }
-
-  function buildPublicProductUrl(source, barcode){
-    return source === 'beauty'
-      ? `https://world.openbeautyfacts.org/product/${barcode}`
-      : `https://world.openfoodfacts.org/product/${barcode}`;
-  }
-
-  function applyLookupResult(productId, result){
-    const product = products.find(p => p.id === productId);
-    if (!product) return;
-    if (result.name) product.name = result.name;
-    if (result.weight) product.weight = result.weight;
-    product.foundIn = result.sourceLabel;
-    product.quantityText = result.quantityText || '';
-    product.productUrl = result.productUrl || '';
-    product.barcode = result.barcode || product.barcode;
-    render();
-    const details = [];
-    if (product.name) details.push(product.name);
-    if (product.quantityText) details.push(product.quantityText);
-    setLookupState(productId, `Found in ${result.sourceLabel}${details.length ? ' · ' + details.join(' · ') : ''}`, 'ok');
-  }
-
-  function parseQuantity(raw, targetUnit){
-    if (!raw) return { value:'' };
-    const text = String(raw).replace(/,/g,'.').trim().toLowerCase();
-
-    const patterns = [
-      /(\d+(?:\.\d+)?)\s*(kg|g|mg|l|ml|oz|fl\s*oz|lb)\s*[x×]\s*(\d+(?:\.\d+)?)/i,
-      /(\d+(?:\.\d+)?)\s*[x×]\s*(\d+(?:\.\d+)?)\s*(kg|g|mg|l|ml|oz|fl\s*oz|lb)/i,
-      /(\d+(?:\.\d+)?)\s*(kg|g|mg|l|ml|oz|fl\s*oz|lb)/i,
-      /(\d+(?:\.\d+)?)\s*(pcs|piece|pieces|count|ct)/i
-    ];
-
-    let totalBase = null;
-
-    for (const pattern of patterns){
-      const match = text.match(pattern);
-      if (!match) continue;
-
-      if (pattern === patterns[0]){
-        const qty = parseFloat(match[1]);
-        const unit = normalizeParsedUnit(match[2]);
-        const count = parseFloat(match[3]);
-        totalBase = toBaseUnit(qty, unit) * count;
-        break;
+    function setEmoji(id, emoji) {
+      const p = products.find(p => p.id === id);
+      if (p) {
+        p.emoji = emoji;
+        const card = document.querySelector(`[data-id="${id}"]`);
+        if (card) card.querySelector('.card-icon').firstChild.textContent = emoji;
       }
-
-      if (pattern === patterns[1]){
-        const count = parseFloat(match[1]);
-        const qty = parseFloat(match[2]);
-        const unit = normalizeParsedUnit(match[3]);
-        totalBase = toBaseUnit(qty, unit) * count;
-        break;
-      }
-
-      if (pattern === patterns[2]){
-        const qty = parseFloat(match[1]);
-        const unit = normalizeParsedUnit(match[2]);
-        totalBase = toBaseUnit(qty, unit);
-        break;
-      }
-
-      if (pattern === patterns[3]){
-        return { value: String(parseFloat(match[1])) };
-      }
+      closeEmojiPicker();
     }
 
-    if (totalBase === null || Number.isNaN(totalBase)) return { value:'' };
-    return { value: formatConvertedFromBase(totalBase, targetUnit) };
-  }
-
-  function normalizeParsedUnit(unit){
-    const u = String(unit).replace(/\s+/g,' ').trim().toLowerCase();
-    if (u === 'mg') return 'g';
-    if (u === 'fl oz') return 'fl oz';
-    return u;
-  }
-
-  function toBaseUnit(value, unit){
-    if (unit === 'mg') return value / 1000;
-    const factor = TO_BASE[unit] || 1;
-    return value * factor;
-  }
-
-  function formatConvertedFromBase(baseValue, unit){
-    if (unit === 'pcs') return '';
-    const converted = baseValue * (FROM_BASE[unit] || 1);
-    if (!Number.isFinite(converted)) return '';
-    const rounded = converted >= 100 ? converted.toFixed(1) : converted >= 10 ? converted.toFixed(2) : converted.toFixed(3);
-    return String(parseFloat(rounded));
-  }
-
-  function formatUnitCost(value){
-    const label = currentUnit === 'pcs' ? '฿ / piece' : { g:'฿ / g or ml', kg:'฿ / kg or L', oz:'฿ / oz', lb:'฿ / lb' }[currentUnit];
-    const amount = value < 1 ? value.toFixed(4) : value < 10 ? value.toFixed(3) : value < 100 ? value.toFixed(2) : value.toFixed(1);
-    return `${amount} ${label}`;
-  }
-
-  function recalcAll(){
-    const calculated = products.map(p => {
-      const price = parseFloat(p.price);
-      const weight = parseFloat(p.weight);
-      const valid = Number.isFinite(price) && Number.isFinite(weight) && price > 0 && weight > 0;
-      return { id:p.id, value: valid ? price / weight : null };
-    });
-
-    const validItems = calculated.filter(item => item.value !== null);
-    let cheapest = null;
-    let priciest = null;
-
-    if (validItems.length >= 2){
-      validItems.sort((a,b) => a.value - b.value);
-      cheapest = validItems[0];
-      priciest = validItems[validItems.length - 1];
-    }
-
-    products.forEach(p => {
-      const card = document.querySelector(`[data-id="${p.id}"]`);
+    function openEmojiPicker(id) {
+      closeEmojiPicker();
+      const card = document.querySelector(`[data-id="${id}"]`);
       if (!card) return;
-      card.classList.remove('best','worst');
-      const badge = card.querySelector('.dynamic-badge');
-      const result = calculated.find(item => item.id === p.id)?.value;
-      const resultEl = card.querySelector('.result .big');
-
-      if (result !== null){
-        resultEl.textContent = formatUnitCost(result);
-      } else {
-        resultEl.textContent = '—';
-      }
-
-      if (badge){ badge.className = 'chip dynamic-badge'; badge.textContent = 'Ready'; }
-
-      if (cheapest && p.id === cheapest.id){
-        card.classList.add('best');
-        if (badge){ badge.className = 'chip best dynamic-badge'; badge.textContent = 'Cheapest'; }
-      } else if (priciest && p.id === priciest.id){
-        card.classList.add('worst');
-        if (badge){ badge.className = 'chip worst dynamic-badge'; badge.textContent = 'Priciest'; }
-      }
-    });
-
-    const bar = document.getElementById('summaryBar');
-    const text = document.getElementById('summaryText');
-    if (cheapest && priciest && priciest.value > 0){
-      const saving = ((priciest.value - cheapest.value) / priciest.value) * 100;
-      const bestName = products.find(p => p.id === cheapest.id)?.name || 'This option';
-      text.innerHTML = `<strong>${escapeHtml(bestName)}</strong> is the cheapest choice right now and saves about <strong>${saving.toFixed(1)}%</strong> versus the priciest option.`;
-      bar.classList.add('show');
-    } else {
-      bar.classList.remove('show');
-      text.innerHTML = '';
+      const picker = card.querySelector('.emoji-picker');
+      picker.classList.add('open');
+      activeEmojiCard = id;
     }
-  }
 
-  function renderMetaOnly(id){
-    const product = products.find(p => p.id === id);
-    const card = document.querySelector(`[data-id="${id}"]`);
-    if (!product || !card) return;
-    const sourceEl = card.querySelector('.meta-source');
-    const qtyEl = card.querySelector('.meta-qty');
-    const linkEl = card.querySelector('.meta-link');
-    sourceEl.textContent = product.foundIn || '—';
-    qtyEl.textContent = product.quantityText || '—';
-    linkEl.innerHTML = product.productUrl ? `<a href="${escapeAttribute(product.productUrl)}" target="_blank" rel="noopener noreferrer">Open source page</a>` : '—';
-  }
+    function closeEmojiPicker() {
+      document.querySelectorAll('.emoji-picker.open').forEach(p => p.classList.remove('open'));
+      activeEmojiCard = null;
+    }
 
-  function render(){
-    const grid = document.getElementById('grid');
-    grid.innerHTML = '';
+    function startRename(id) {
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (!card) return;
+      const display = card.querySelector('.card-name-display');
+      const input = card.querySelector('.card-name-input');
+      display.style.display = 'none';
+      input.style.display = 'block';
+      input.focus();
+      input.select();
+    }
 
-    products.forEach((p, index) => {
-      const card = document.createElement('article');
-      card.className = 'card';
-      card.dataset.id = p.id;
-      card.innerHTML = `
-        <div class="card-header">
-          <div class="card-chip-wrap">
-            <span class="chip">#${index + 1}</span>
-            <span class="chip dynamic-badge">Ready</span>
-          </div>
-          <button class="icon-btn" onclick="removeProduct(${p.id})" aria-label="Remove product">✕</button>
-        </div>
+    function commitRename(id) {
+      const card = document.querySelector(`[data-id="${id}"]`);
+      if (!card) return;
+      const display = card.querySelector('.card-name-display');
+      const input = card.querySelector('.card-name-input');
+      const p = products.find(p => p.id === id);
+      if (p) p.name = input.value.trim() || p.name;
+      display.querySelector('.name-text').textContent = p ? p.name : '';
+      input.style.display = 'none';
+      display.style.display = 'flex';
+    }
 
-        <div class="grid">
-          <div class="field">
-            <label>Product name</label>
-            <input class="name-input" type="text" placeholder="e.g. Sunscreen SPF50 50 ml" value="${escapeAttribute(p.name)}" oninput="updateField(${p.id}, 'name', this.value)">
-          </div>
+    function formatNum(v, min = 2, max = 4) {
+      return Number(v).toLocaleString(undefined, { minimumFractionDigits: min, maximumFractionDigits: max });
+    }
 
-          <div class="lookup-row">
-            <div class="field">
-              <label>Barcode</label>
-              <input class="mono" type="text" placeholder="Scan or type barcode number" value="${escapeAttribute(p.barcode)}"
-                oninput="updateField(${p.id}, 'barcode', this.value)"
-                onkeydown="if(event.key==='Enter'){ lookupBarcode(this.value.trim(), ${p.id}, document.getElementById('source-${p.id}').value); }">
+    function render() {
+      const container = document.getElementById('cards');
+      container.innerHTML = '';
+
+      products.forEach((p, idx) => {
+        const canRemove = products.length > 2;
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.dataset.id = p.id;
+        card.style.animationDelay = `${idx * 0.05}s`;
+
+        const emojiHtml = EMOJIS.map(e =>
+          `<button class="emoji-btn" onclick="setEmoji('${p.id}','${e}')">${e}</button>`
+        ).join('');
+
+        card.innerHTML = `
+          ${canRemove ? `<button class="btn-remove" title="Remove" onclick="removeProduct('${p.id}')">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+          </button>` : ''}
+
+          <div class="card-head">
+            <div class="card-icon" onclick="openEmojiPicker('${p.id}')">
+              <span>${p.emoji}</span>
+              <span class="card-icon-hint">tap</span>
             </div>
-            <div class="field">
-              <label>Lookup source</label>
-              <select id="source-${p.id}" onchange="updateField(${p.id}, 'barcodeSource', this.value)">
-                <option value="auto" ${p.barcodeSource === 'auto' ? 'selected' : ''}>Auto</option>
-                <option value="food" ${p.barcodeSource === 'food' ? 'selected' : ''}>Food</option>
-                <option value="beauty" ${p.barcodeSource === 'beauty' ? 'selected' : ''}>Beauty</option>
-              </select>
-            </div>
-            <button class="scan-btn" onclick="startScanner(${p.id})" title="Scan barcode">📷</button>
-          </div>
 
-          <div style="display:flex; gap:10px; flex-wrap:wrap;">
-            <button class="btn secondary" style="padding:10px 14px;" onclick="lookupBarcode(document.querySelector('[data-id=&quot;${p.id}&quot;] input.mono').value.trim(), ${p.id}, document.getElementById('source-${p.id}').value)">Lookup barcode</button>
-          </div>
+            <div class="emoji-picker">
+              ${emojiHtml}
+            </div>
 
-          <div class="status ${escapeAttribute(p.lookupClass)}">${escapeHtml(p.lookupStatus || 'Ready for manual entry or barcode lookup.')}</div>
+            <div class="card-name-wrap">
+              <div class="card-name-display" onclick="startRename('${p.id}')">
+                <span class="name-text">${escHtml(p.name)}</span>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+              </div>
+              <input class="card-name-input" type="text" value="${escHtml(p.name)}"
+                onblur="commitRename('${p.id}')"
+                onkeydown="if(event.key==='Enter'||event.key==='Escape') this.blur()" />
+              <div class="card-sub">tap name to rename</div>
+            </div>
 
-          <div class="meta">
-            <div class="meta-box">
-              <div class="meta-label">Found in</div>
-              <div class="meta-value meta-source">${escapeHtml(p.foundIn || '—')}</div>
-            </div>
-            <div class="meta-box">
-              <div class="meta-label">Quantity from database</div>
-              <div class="meta-value meta-qty">${escapeHtml(p.quantityText || '—')}</div>
-            </div>
-            <div class="meta-box" style="grid-column:1 / -1;">
-              <div class="meta-label">Source page</div>
-              <div class="meta-value meta-link">${p.productUrl ? `<a href="${escapeAttribute(p.productUrl)}" target="_blank" rel="noopener noreferrer">Open source page</a>` : '—'}</div>
-            </div>
+            <div class="badge"></div>
           </div>
 
           <div class="field-row">
             <div class="field">
-              <label>Price (฿)</label>
-              <input type="number" min="0" step="0.01" placeholder="0.00" value="${escapeAttribute(p.price)}" oninput="updateField(${p.id}, 'price', this.value)">
+              <label>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18L18 4"/><path d="M14 4h4v4"/><path d="M6 20h14"/></svg>
+                Amount
+              </label>
+              <input type="number" inputmode="decimal" min="0" step="any" placeholder="500"
+                value="${escHtml(p.amount)}"
+                oninput="updateField('${p.id}','amount',this.value)" />
             </div>
             <div class="field">
-              <label>Weight / size (${UNIT_LABELS[currentUnit]})</label>
-              <input type="number" min="0" step="any" placeholder="0" value="${escapeAttribute(p.weight)}" oninput="updateField(${p.id}, 'weight', this.value)">
+              <label>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M17 8c0-1.7-2.2-3-5-3s-5 1.3-5 3 1.8 2.5 5 3 5 1.3 5 3-2.2 3-5 3-5-1.3-5-3"/></svg>
+                Price
+              </label>
+              <input type="number" inputmode="decimal" min="0" step="any" placeholder="89"
+                value="${escHtml(p.price)}"
+                oninput="updateField('${p.id}','price',this.value)" />
             </div>
           </div>
 
-          <div class="result">
-            <div class="small">Unit price</div>
-            <div class="big">—</div>
-            <div class="small">${UNIT_PRICE_LABELS[currentUnit]}</div>
+          <div class="result-row">
+            <div class="result-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 18l5-5 4 4 7-8"/></svg>
+              Price per unit
+            </div>
+            <div>
+              <div class="result-value">—</div>
+              <div class="result-math"></div>
+            </div>
           </div>
-        </div>`;
-      grid.appendChild(card);
+        `;
+
+        if (canRemove) card.querySelector('.btn-remove').style.display = 'flex';
+        container.appendChild(card);
+      });
+
+      recalc();
+    }
+
+    function escHtml(v) {
+      return String(v ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+
+    function recalc() {
+      const results = products.map(p => {
+        const amount = parseFloat(p.amount);
+        const price = parseFloat(p.price);
+        const valid = isFinite(amount) && amount > 0 && isFinite(price) && price > 0;
+        return { ...p, amount, price, valid, unitPrice: valid ? price / amount : null };
+      });
+
+      const valid = results.filter(r => r.valid);
+      let best = null, worst = null;
+
+      if (valid.length) {
+        best = valid.reduce((a, b) => a.unitPrice <= b.unitPrice ? a : b);
+        worst = valid.reduce((a, b) => a.unitPrice >= b.unitPrice ? a : b);
+      }
+
+      document.querySelectorAll('.card').forEach(card => {
+        const id = card.dataset.id;
+        const data = results.find(r => r.id === id);
+        const badge = card.querySelector('.badge');
+        const rv = card.querySelector('.result-value');
+        const rm = card.querySelector('.result-math');
+
+        card.classList.remove('best', 'worst');
+        badge.className = 'badge';
+        badge.textContent = '';
+
+        if (data && data.valid) {
+          rv.textContent = formatNum(data.unitPrice);
+          rv.classList.add('has-value');
+          rm.textContent = `${formatNum(data.price)} ÷ ${formatNum(data.amount, 0, 4)}`;
+        } else {
+          rv.textContent = '—';
+          rv.classList.remove('has-value');
+          rm.textContent = '';
+        }
+
+        if (best && data && data.valid && data.id === best.id) {
+          card.classList.add('best');
+          badge.className = 'badge best';
+          badge.textContent = '✓ Best deal';
+        } else if (best && worst && best.id !== worst.id && data && data.valid && data.id === worst.id) {
+          card.classList.add('worst');
+          badge.className = 'badge worst';
+          badge.textContent = '↑ Pricier';
+        }
+      });
+
+      // verdict
+      const verdict = document.getElementById('verdict');
+      const vName = document.getElementById('verdictName');
+      const vSavings = document.getElementById('verdictSavings');
+      const shareBtn = document.getElementById('shareBtn');
+
+      if (valid.length >= 2 && best && worst && best.id !== worst.id) {
+        const savings = ((worst.unitPrice - best.unitPrice) / worst.unitPrice) * 100;
+        vName.textContent = `${best.emoji}  ${best.name} wins`;
+        vSavings.textContent = `${formatNum(savings, 1, 1)}% cheaper per unit than ${worst.name}`;
+        verdict.classList.add('visible');
+        shareBtn.classList.add('visible');
+      } else if (valid.length === 1) {
+        vName.textContent = 'Keep going…';
+        vSavings.textContent = 'Add one more product';
+        verdict.classList.add('visible');
+        shareBtn.classList.remove('visible');
+      } else {
+        verdict.classList.remove('visible');
+        shareBtn.classList.remove('visible');
+      }
+    }
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2200);
+    }
+
+    // Share
+    document.getElementById('shareBtn').addEventListener('click', () => {
+      const vName = document.getElementById('verdictName').textContent;
+      const vSavings = document.getElementById('verdictSavings').textContent;
+      const text = `🏆 ${vName}\n📊 ${vSavings}\n\nCompared with Price Pop`;
+      if (navigator.share) {
+        navigator.share({ title: 'Price Pop Result', text }).catch(() => {});
+      } else {
+        navigator.clipboard.writeText(text).then(() => showToast('Result copied to clipboard! 📋'));
+      }
     });
 
-    recalcAll();
-  }
+    document.getElementById('addBtn').addEventListener('click', () => {
+      const labels = ['Product A','Product B','Product C','Product D','Product E','Product F'];
+      const name = labels[products.length] || `Product ${products.length + 1}`;
+      addProduct(name, '', '', '🛍️');
+    });
 
-  function resetAll(){
-    stopScanner();
-    products = [];
-    idCounter = 0;
-    addProduct();
-    addProduct();
-  }
+    document.getElementById('resetBtn').addEventListener('click', resetAll);
 
-  function escapeHtml(value){
-    return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-  }
+    // close emoji picker on outside click
+    document.addEventListener('click', e => {
+      if (activeEmojiCard && !e.target.closest('.card-icon') && !e.target.closest('.emoji-picker')) {
+        closeEmojiPicker();
+      }
+    });
 
-  function escapeAttribute(value){
-    return escapeHtml(value);
-  }
+    // expose globals for inline handlers
+    window.updateField = updateField;
+    window.removeProduct = removeProduct;
+    window.startRename = startRename;
+    window.commitRename = commitRename;
+    window.openEmojiPicker = openEmojiPicker;
+    window.setEmoji = setEmoji;
 
-  addProduct();
-  addProduct();
-</script>
+    resetAll();
+  </script>
 </body>
 </html>
